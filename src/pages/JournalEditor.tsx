@@ -7,6 +7,7 @@ import { entityService } from "@/services/entityService";
 import type { NoteResponse, Entity } from "@/types/models";
 import { toast } from "sonner";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import MarkdownEditor from "@/components/MarkdownEditor";
 
 // Simple mention parser: {type:id} patterns shown as colored spans in preview
 const MENTION_RE = /\{(\w+):([a-zA-Z0-9_-]+)\}/g;
@@ -66,12 +67,11 @@ export default function JournalEditorPage() {
 
   const detectMention = useCallback((text: string, cursorPos: number) => {
     const textBefore = text.slice(0, cursorPos);
-    const atMatch = textBefore.match(/@(\w*)$/);
-    if (atMatch) {
-      setMentionQuery(atMatch[1]);
+    const braceMatch = textBefore.match(/\{(\w*)$/);
+    if (braceMatch) {
+      setMentionQuery(braceMatch[1]);
       const ta = textareaRef.current;
       if (ta) {
-        // Simple position estimation
         setMentionPos({ top: ta.offsetTop + 30, left: ta.offsetLeft + 20 });
       }
     } else {
@@ -104,9 +104,9 @@ export default function JournalEditorPage() {
     if (!ta) return;
     const pos = ta.selectionStart;
     const textBefore = content.slice(0, pos);
-    const atIndex = textBefore.lastIndexOf("@");
+    const braceIndex = textBefore.lastIndexOf("{");
     const newContent =
-      content.slice(0, atIndex) +
+      content.slice(0, braceIndex) +
       `{${entity.type.toLowerCase()}:${entity.id}}` +
       content.slice(pos);
     setContent(newContent);
@@ -114,6 +114,29 @@ export default function JournalEditorPage() {
     setMentionPos(null);
     ta.focus();
   };
+
+  // Save on shortcuts and attempt save before logout
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      if ((e.ctrlKey && e.key.toLowerCase() === 's') || (e.metaKey && e.key === 's')) {
+        e.preventDefault();
+        handleSave();
+      }
+      if ((e.metaKey && e.key === 'Enter') || (e.ctrlKey && e.key === 'Enter')) {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    const onAuthLogout = () => { if (id) autoSave(content); };
+    window.addEventListener('keydown', onKey as EventListener);
+    window.addEventListener('auth:logout', onAuthLogout as EventListener);
+    window.addEventListener('beforeunload', () => { if (id) localStorage.setItem(`draft_note_${id}`, content); });
+    return () => {
+      window.removeEventListener('keydown', onKey as EventListener);
+      window.removeEventListener('auth:logout', onAuthLogout as EventListener);
+    };
+  }, [content, id]);
 
   const handleSave = async () => {
     if (!content.trim()) { toast.error("Conteúdo vazio"); return; }
@@ -161,16 +184,13 @@ export default function JournalEditorPage() {
       </div>
 
       <div className="relative">
-        <textarea
-          ref={textareaRef}
+        <MarkdownEditor
           value={content}
-          onChange={handleChange}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") { setMentionQuery(""); setMentionPos(null); }
-          }}
-          placeholder={`Escreva sua entrada...\n\nUse @ para mencionar entidades: @nome\nO formato salvo é {tipo:id}`}
-          className="w-full min-h-[60vh] bg-[#0d0d0f] border border-white/5 rounded-xl px-5 py-4 text-sm text-[#ddd] placeholder-[#333] focus:outline-none focus:border-white/10 resize-none leading-relaxed font-mono transition-colors"
+          onChange={(v) => { setContent(v); detectMention(v, textareaRef.current?.selectionStart ?? v.length); }}
+          placeholder={`Escreva sua entrada...\n\nUse { para mencionar entidades: {nome\nO formato salvo é {tipo:id}`}
+          preview={false}
         />
+        <textarea ref={textareaRef} className="hidden" />
         {mentionPos && (
           <div style={{ position: "absolute", top: mentionPos.top, left: mentionPos.left }}>
             <MentionSuggestion

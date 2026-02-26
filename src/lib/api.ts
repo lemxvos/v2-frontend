@@ -37,6 +37,18 @@ api.interceptors.response.use(
       return new Promise((resolve) => setTimeout(resolve, delay)).then(() => api.request(config));
     }
 
+    // 403: forbidden — inform UI
+    if (status === 403) {
+      try { window.dispatchEvent(new CustomEvent("api:forbidden", { detail: err.response?.data })); } catch (e) {}
+      return Promise.reject(err);
+    }
+
+    // 5xx server errors — dispatch for global modal
+    if (status >= 500 && status < 600) {
+      try { window.dispatchEvent(new CustomEvent("api:serverError", { detail: { status, data: err.response?.data } })); } catch (e) {}
+      return Promise.reject(err);
+    }
+
     return Promise.reject(err);
   }
 );
