@@ -168,28 +168,30 @@ export default function AllEntitiesPage() {
           </div>
         </div>
       )}
-+      {/* entity form modal */}
-+      {modalOpen && (
-+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
-+          <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-xl">
-+            <div className="flex justify-between items-center p-4 border-b border-white/5">
-+              <h3 className="text-lg font-semibold">{modalEntity ? "Editar" : "Nova"} entidade</h3>
-+              <button onClick={() => setModalOpen(false)} className="text-[#888] hover:text-white">✖</button>
-+            </div>
-+            <EntityForm
-+              entity={modalEntity || undefined}
-+              onSaved={(e) => {
-+                if (modalEntity) {
-+                  setEntities((prev) => prev.map((x) => (x.id === e.id ? e : x)));
-+                } else {
-+                  setEntities((prev) => [...prev, e]);
-+                }                setMentionMap((prev) => ({ ...prev, [e.id]: prev[e.id] || 0 }));+                setModalOpen(false);
-+              }}
-+              onCancel={() => setModalOpen(false)}
-+            />
-+          </div>
-+        </div>
-+      )}
+      {/* entity form modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-xl">
+            <div className="flex justify-between items-center p-4 border-b border-white/5">
+              <h3 className="text-lg font-semibold">{modalEntity ? "Editar" : "Nova"} entidade</h3>
+              <button onClick={() => setModalOpen(false)} className="text-[#888] hover:text-white">✖</button>
+            </div>
+            <EntityForm
+              entity={modalEntity || undefined}
+              onSaved={(e) => {
+                if (modalEntity) {
+                  setEntities((prev) => prev.map((x) => (x.id === e.id ? e : x)));
+                } else {
+                  setEntities((prev) => [...prev, e]);
+                }
+                setMentionMap((prev) => ({ ...prev, [e.id]: prev[e.id] || 0 }));
+                setModalOpen(false);
+              }}
+              onCancel={() => setModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

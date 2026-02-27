@@ -234,6 +234,7 @@ export default function EntityForm({ entity, onSaved, onCancel }: Props) {
               </div>
             </div>
           )}
+        </div>
       )}
       <div className="flex justify-end gap-2">
         {onCancel && (

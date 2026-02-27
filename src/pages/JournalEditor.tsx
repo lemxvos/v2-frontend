@@ -176,6 +176,14 @@ export default function JournalEditorPage() {
     </div>
   );
 
+  // substitute mentions to show friendly names during preview
+  const renderedContent = preview
+    ? content.replace(MENTION_RE, (_, type, id) => {
+        const ent = entities.find((e) => e.id === id);
+        return ent ? `${ent.icon ? ent.icon + ' ' : ''}${ent.name}` : `{${type}:${id}}`;
+      })
+    : content;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -209,11 +217,13 @@ export default function JournalEditorPage() {
       <div className="relative">
         <MarkdownEditor
           ref={textareaRef}
-          value={content}
+          value={renderedContent}
           onChange={(v) => { setContent(v); detectMention(v, textareaRef.current?.selectionStart ?? v.length); }}
           placeholder={`Escreva sua entrada...\n\nUse { para mencionar entidades: {nome\nO formato salvo é {tipo:id}`}
           preview={preview}
         />
+        {/* when previewing we want readable mentions */}
+
         {mentionPos && (
           <div style={{ position: "absolute", top: mentionPos.top, left: mentionPos.left }}>
             <MentionSuggestion

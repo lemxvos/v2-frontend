@@ -16,6 +16,10 @@ export const subscriptionService = {
   async cancel(): Promise<SubscriptionDTO> {
     return (await api.post<SubscriptionDTO>("/api/subscriptions/cancel")).data;
   },
+  // GET /api/plans
+  async plans(): Promise<any[]> {
+    return (await api.get<any[]>("/api/plans")).data;
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

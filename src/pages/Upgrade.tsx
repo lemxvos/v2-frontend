@@ -6,7 +6,8 @@ import { subscriptionService } from "@/services/subscriptionService";
 import { toast } from "sonner";
 import { Check, Loader2, ArrowLeft } from "lucide-react";
 
-const PLANS = [
+// default plans used if API doesn't return any
+const DEFAULT_PLANS = [
   {
     id: "PRO",
     name: "Pro",
@@ -43,9 +44,16 @@ const PLANS = [
 
 export default function UpgradePage() {
   const navigate = useNavigate();
+  const [plans, setPlans] = useState<typeof DEFAULT_PLANS>(DEFAULT_PLANS);
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleUpgrade = async (plan: typeof PLANS[0]) => {
+  useEffect(() => {
+    subscriptionService.plans()
+      .then((res) => { if (res && res.length) setPlans(res); })
+      .catch(() => {});
+  }, []);
+
+  const handleUpgrade = async (plan: typeof plans[0]) => {
     if (!plan.priceId) { toast.error("Plano não configurado"); return; }
     setLoading(plan.id);
     try {
@@ -71,7 +79,7 @@ export default function UpgradePage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {PLANS.map((plan) => (
+        {plans.map((plan) => (
           <div key={plan.id} className={`bg-[#111] border rounded-xl p-6 ${plan.color}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
