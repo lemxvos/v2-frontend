@@ -1,8 +1,6 @@
-import React from "react";
+import React, { ForwardedRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-
-import React, { ForwardedRef } from "react";
 
 interface MarkdownEditorProps {
   value: string;
