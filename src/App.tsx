@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
+import React from "react";
 import { Toaster, toast } from "sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
