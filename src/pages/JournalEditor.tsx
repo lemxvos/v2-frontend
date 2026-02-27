@@ -248,7 +248,7 @@ export default function JournalEditorPage() {
       </div>
 
       <p className="text-xs text-[#333]">
-        Dica: digite {'{'} seguido do nome para mencionar pessoas, hábitos, projetos e objetivos. (o formato salvo é {'{'}tipo:id})
+        Dica: digite {'{'} seguido do nome para mencionar pessoas, hábitos, projetos e objetivos. (o formato salvo é {'{tipo:id}'})
       </p>
     </div>
   );
