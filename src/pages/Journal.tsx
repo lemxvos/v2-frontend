@@ -35,6 +35,22 @@ export default function JournalPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<NoteIndex | null>(null);
+  const [folderLoading, setFolderLoading] = useState(false);
+
+  // helper to build tree
+  const buildTree = (list: Folder[]) => {
+    const map = new Map<string, Folder & { children?: Folder[] }>();
+    list.forEach((f) => map.set(f.id, { ...f, children: [] }));
+    const roots: (Folder & { children?: Folder[] })[] = [];
+    map.forEach((f) => {
+      if (f.parentId && map.has(f.parentId)) {
+        map.get(f.parentId)!.children!.push(f);
+      } else {
+        roots.push(f);
+      }
+    });
+    return roots;
+  };
 
   useEffect(() => { load(); }, [activeFolderId]);
 
@@ -71,8 +87,87 @@ export default function JournalPage() {
   );
   const groups = groupByDate(filtered);
 
+  const roots = buildTree(folders);
+
+  const renderFolder = (f: Folder & { children?: Folder[] }, depth = 0) => (
+    <div key={f.id} className="flex items-center gap-1" style={{ paddingLeft: depth * 12 }}>
+      <button
+        onClick={() => setActiveFolderId(activeFolderId === f.id ? null : f.id)}
+        className={`flex-1 text-xs text-left transition-colors ${
+          activeFolderId === f.id ? "text-white" : "text-[#555] hover:text-[#888]"
+        }`}
+      >
+        {f.name}
+      </button>
+      <button
+        onClick={async () => {
+          const name = prompt("Novo nome", f.name);
+          if (name && name.trim()) {
+            setFolderLoading(true);
+            try {
+              const updated = await folderService.rename(f.id, name.trim());
+              setFolders((prev) => prev.map((p) => (p.id === f.id ? updated : p)));
+            } catch {
+              toast.error("Erro ao renomear");
+            } finally { setFolderLoading(false); }
+          }
+        }}
+        className="text-[#555] hover:text-white text-xs">
+        ✎
+      </button>
+      <button
+        onClick={async () => {
+          if (!confirm("Excluir pasta?")) return;
+          setFolderLoading(true);
+          try {
+            await folderService.delete(f.id);
+            setFolders((prev) => prev.filter((p) => p.id !== f.id));
+            if (activeFolderId === f.id) setActiveFolderId(null);
+          } catch {
+            toast.error("Erro ao excluir");
+          } finally { setFolderLoading(false); }
+        }}
+        className="text-[#555] hover:text-red-400 text-xs">
+        🗑
+      </button>
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="flex">
+      {/* sidebar */}
+      <div className="w-60 pr-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-bold">Pastas</h2>
+          <button
+            onClick={async () => {
+              const name = prompt("Nome da nova pasta");
+              if (name && name.trim()) {
+                setFolderLoading(true);
+                try {
+                  const f = await folderService.create(name.trim());
+                  setFolders((prev) => [...prev, f]);
+                } catch {
+                  toast.error("Erro ao criar pasta");
+                } finally { setFolderLoading(false); }
+              }
+            }}
+            className="text-[#3ecf8e] text-xs hover:underline"
+          >
+            +
+          </button>
+        </div>
+        <div className="space-y-1">
+          {roots.map((r) => (
+            <div key={r.id} className="space-y-1">
+              {renderFolder(r)}
+              {r.children && r.children.map((c) => renderFolder(c, 1))}
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* content */}
+      <div className="flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Journal</h1>
         <button
@@ -95,31 +190,6 @@ export default function JournalPage() {
         />
       </div>
 
-      {/* Folder filter */}
-      {folders.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            onClick={() => setActiveFolderId(null)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-              !activeFolderId ? "bg-white/10 text-white" : "text-[#555] hover:text-[#888]"
-            }`}
-          >
-            Todas
-          </button>
-          {folders.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setActiveFolderId(activeFolderId === f.id ? null : f.id)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                activeFolderId === f.id ? "bg-white/10 text-white" : "text-[#555] hover:text-[#888]"
-              }`}
-            >
-              <FolderIcon className="h-3 w-3" />
-              {f.name}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Notes */}
       {loading ? (
@@ -197,6 +267,7 @@ export default function JournalPage() {
         </div>
       )}
     </div>
+  </div>
   );
 }
 

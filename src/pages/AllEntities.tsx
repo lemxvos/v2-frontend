@@ -6,6 +6,7 @@ import { entityService } from "@/services/entityService";
 import type { Entity, EntityType } from "@/types/models";
 import { toast } from "sonner";
 import { Plus, Search, Trash2, ChevronRight } from "lucide-react";
+import EntityForm from "@/components/EntityForm";
 
 const TYPE_LABELS: Record<EntityType, string> = {
   PERSON: "Pessoa",
@@ -34,12 +35,21 @@ export default function AllEntitiesPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Entity | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalEntity, setModalEntity] = useState<Entity | null>(null);
+
+  const [mentionMap, setMentionMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
     setLoading(true);
     const type = activeType !== "ALL" ? activeType : undefined;
     entityService.list(type)
-      .then(setEntities)
+      .then((list) => {
+        setEntities(list);
+        if (list.length) {
+          entityService.mentions(list.map((e) => e.id)).then(setMentionMap).catch(() => {});
+        }
+      })
       .catch(() => toast.error("Erro ao carregar entidades"))
       .finally(() => setLoading(false));
   }, [activeType]);
@@ -65,7 +75,7 @@ export default function AllEntitiesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Entidades</h1>
         <button
-          onClick={() => navigate("/entities/new")}
+          onClick={() => { setModalEntity(null); setModalOpen(true); }}
           className="flex items-center gap-1.5 bg-[#3ecf8e]/10 hover:bg-[#3ecf8e]/20 text-[#3ecf8e] text-xs font-semibold px-3 py-2 rounded-md transition-colors border border-[#3ecf8e]/20"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -124,7 +134,16 @@ export default function AllEntitiesPage() {
                     {entity.description && ` · ${entity.description.slice(0, 40)}`}
                   </p>
                 </div>
+                <span className="text-[11px] font-mono text-[#555] mr-2">
+                  {mentionMap[entity.id] ?? 0}
+                </span>
                 <ChevronRight className="h-3.5 w-3.5 text-[#333] group-hover:text-[#555] shrink-0 transition-colors" />
+              </button>
+              <button
+                onClick={() => { setModalEntity(entity); setModalOpen(true); }}
+                className="p-2 rounded-md text-[#333] hover:text-[#3ecf8e] hover:bg-[#3ecf8e]/5 transition-all opacity-0 group-hover:opacity-100"
+              >
+                ✎
               </button>
               <button
                 onClick={() => setDeleteTarget(entity)}
@@ -141,7 +160,7 @@ export default function AllEntitiesPage() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
           <div className="bg-[#111] border border-white/10 rounded-xl p-6 w-full max-w-sm">
             <h3 className="font-semibold mb-2">Arquivar entidade?</h3>
-            <p className="text-sm text-[#666] mb-5">"{deleteTarget.name}" será arquivada. Menções no journal serão preservadas.</p>
+            <p className="text-sm texto-[#666] mb-5">"{deleteTarget.name}" será arquivada. Menções no journal serão preservadas.</p>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm text-[#888] hover:text-white transition-colors">Cancelar</button>
               <button onClick={handleDelete} className="px-4 py-2 text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-md transition-colors">Arquivar</button>
@@ -149,6 +168,28 @@ export default function AllEntitiesPage() {
           </div>
         </div>
       )}
++      {/* entity form modal */}
++      {modalOpen && (
++        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
++          <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-xl">
++            <div className="flex justify-between items-center p-4 border-b border-white/5">
++              <h3 className="text-lg font-semibold">{modalEntity ? "Editar" : "Nova"} entidade</h3>
++              <button onClick={() => setModalOpen(false)} className="text-[#888] hover:text-white">✖</button>
++            </div>
++            <EntityForm
++              entity={modalEntity || undefined}
++              onSaved={(e) => {
++                if (modalEntity) {
++                  setEntities((prev) => prev.map((x) => (x.id === e.id ? e : x)));
++                } else {
++                  setEntities((prev) => [...prev, e]);
++                }                setMentionMap((prev) => ({ ...prev, [e.id]: prev[e.id] || 0 }));+                setModalOpen(false);
++              }}
++              onCancel={() => setModalOpen(false)}
++            />
++          </div>
++        </div>
++      )}
     </div>
   );
 }

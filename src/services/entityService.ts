@@ -48,6 +48,11 @@ export const entityService = {
   async search(q: string, type?: EntityType): Promise<Entity[]> {
     return (await api.get<Entity[]>("/api/entities/search", { params: { q, ...(type && { type }) } })).data;
   },
+  // GET /api/entities/mentions?ids=comma,separated
+  async mentions(ids: string[]): Promise<Record<string, number>> {
+    const res = await api.get<Record<string, number>>("/api/entities/mentions", { params: { ids: ids.join(",") } });
+    return res.data;
+  },
   // GET /api/entities/archived
   async listArchived(): Promise<Entity[]> {
     return (await api.get<Entity[]>("/api/entities/archived")).data;

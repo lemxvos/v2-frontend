@@ -2,21 +2,24 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-export default function MarkdownEditor({
-  value,
-  onChange,
-  placeholder,
-  preview = false,
-}: {
+import React, { ForwardedRef } from "react";
+
+interface MarkdownEditorProps {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   preview?: boolean;
-}) {
+}
+
+const MarkdownEditor = React.forwardRef(function MarkdownEditor(
+  { value, onChange, placeholder, preview = false }: MarkdownEditorProps,
+  ref: ForwardedRef<HTMLTextAreaElement>
+) {
   return (
     <div>
       {!preview ? (
         <textarea
+          ref={ref}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -29,4 +32,6 @@ export default function MarkdownEditor({
       )}
     </div>
   );
-}
+});
+
+export default MarkdownEditor;

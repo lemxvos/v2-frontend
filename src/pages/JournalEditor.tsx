@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { noteService } from "@/services/noteService";
 import { entityService } from "@/services/entityService";
-import type { NoteResponse, Entity } from "@/types/models";
+import { folderService } from "@/services/folderService";
+import type { NoteResponse, Entity, Folder } from "@/types/models";
 import { toast } from "sonner";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import MarkdownEditor from "@/components/MarkdownEditor";
@@ -47,6 +48,8 @@ export default function JournalEditorPage() {
   const navigate = useNavigate();
   const [content, setContent] = useState("");
   const [note, setNote] = useState<NoteResponse | null>(null);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
@@ -54,12 +57,18 @@ export default function JournalEditorPage() {
   const [mentionPos, setMentionPos] = useState<{ top: number; left: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     entityService.list().then(setEntities).catch(() => {});
+    folderService.list().then(setFolders).catch(() => {});
     if (id) {
       noteService.get(id)
-        .then((n) => { setNote(n); setContent(n.content); })
+        .then((n) => {
+          setNote(n);
+          setContent(n.content);
+          setSelectedFolder(n.folderId || null);
+        })
         .catch(() => toast.error("Nota não encontrada"))
         .finally(() => setLoading(false));
     }
@@ -144,9 +153,13 @@ export default function JournalEditorPage() {
     try {
       if (id) {
         await noteService.update(id, content);
+        // move if folder changed
+        if (selectedFolder !== note?.folderId) {
+          await noteService.move(id, selectedFolder ?? null);
+        }
         toast.success("Nota salva");
       } else {
-        const n = await noteService.create(content);
+        const n = await noteService.create(content, selectedFolder || undefined);
         toast.success("Nota criada");
         navigate(`/journal/${n.id}`, { replace: true });
       }
@@ -172,6 +185,16 @@ export default function JournalEditorPage() {
         </button>
         <div className="flex items-center gap-2">
           {id && <span className="text-xs text-[#444] font-mono">salvo automaticamente</span>}
+          <select
+            value={selectedFolder || ""}
+            onChange={(e) => setSelectedFolder(e.target.value || null)}
+            className="bg-[#111] border border-white/10 text-xs rounded-md px-2 py-1 text-white"
+          >
+            <option value="">Sem pasta</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
           <button
             onClick={handleSave}
             disabled={saving}
@@ -185,12 +208,12 @@ export default function JournalEditorPage() {
 
       <div className="relative">
         <MarkdownEditor
+          ref={textareaRef}
           value={content}
           onChange={(v) => { setContent(v); detectMention(v, textareaRef.current?.selectionStart ?? v.length); }}
           placeholder={`Escreva sua entrada...\n\nUse { para mencionar entidades: {nome\nO formato salvo é {tipo:id}`}
-          preview={false}
+          preview={preview}
         />
-        <textarea ref={textareaRef} className="hidden" />
         {mentionPos && (
           <div style={{ position: "absolute", top: mentionPos.top, left: mentionPos.left }}>
             <MentionSuggestion
@@ -202,8 +225,20 @@ export default function JournalEditorPage() {
         )}
       </div>
 
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-[#555] flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={preview}
+            onChange={(e) => setPreview(e.target.checked)}
+            className="bg-[#111] border border-white/5"
+          />
+          Mostrar preview
+        </label>
+      </div>
+
       <p className="text-xs text-[#333]">
-        Dica: use <code className="text-[#555]">@nome</code> para mencionar pessoas, hábitos, projetos e objetivos.
+        Dica: digite {'{'} seguido do nome para mencionar pessoas, hábitos, projetos e objetivos. (o formato salvo é {'{'}tipo:id})
       </p>
     </div>
   );

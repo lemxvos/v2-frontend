@@ -12,6 +12,8 @@ import ErrorModal from "@/components/ErrorModal";
 import { AuthProvider } from "@/context/AuthContext";
 import LoginPage from "@/pages/Login";
 import RegisterPage from "@/pages/Register";
+import ForgotPasswordPage from "@/pages/ForgotPassword";
+import ResetPasswordPage from "@/pages/ResetPassword";
 import DashboardPage from "@/pages/Dashboard";
 import JournalPage from "@/pages/Journal";
 import JournalEditorPage from "@/pages/JournalEditor";
@@ -45,6 +47,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot" element={<ForgotPasswordPage />} />
+      <Route path="/reset" element={<ResetPasswordPage />} />
       <Route
         path="/*"
         element={

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { subscriptionService } from "@/services/subscriptionService";
+import { accountService } from "@/services/accountService";
 import type { SubscriptionDTO } from "@/types/models";
 import { toast } from "sonner";
 import { LogOut, ChevronRight, Shield, CreditCard, User, Zap } from "lucide-react";
@@ -35,43 +36,108 @@ export default function SettingsPage() {
 
   if (!user) return null;
 
+  const [username, setUsername] = useState(user.username);
+  const [email, setEmail] = useState(user.email);
+  const [acctLoading, setAcctLoading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  const saveAccount = async () => {
+    setAcctLoading(true);
+    try {
+      await accountService.update({ username, email });
+      toast.success("Conta atualizada");
+      // refresh user in store
+      useAuthStore.getState().updateUser({ username, email });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro atualizar conta");
+    } finally { setAcctLoading(false); }
+  };
+
+  const changePwd = async () => {
+    if (!currentPassword || !newPassword) return;
+    setPwdLoading(true);
+    try {
+      await accountService.changePassword(currentPassword, newPassword);
+      toast.success("Senha alterada");
+      setCurrentPassword("");
+      setNewPassword("");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro alterar senha");
+    } finally { setPwdLoading(false); }
+  };
+
   return (
     <div className="space-y-6 max-w-lg mx-auto">
       <h1 className="text-xl font-bold">Configurações</h1>
 
       {/* Account */}
-      <div className="bg-[#111] border border-white/5 rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="bg-[#111] border border-white/5 rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-[#555]" />
           <p className="text-xs font-medium text-[#555] uppercase tracking-wider">Conta</p>
         </div>
         <div className="space-y-3">
           <div>
             <p className="text-xs text-[#555]">Username</p>
-            <p className="text-sm text-[#ddd] mt-0.5">{user.username}</p>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-[#111] border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-white/10"
+            />
           </div>
           <div>
             <p className="text-xs text-[#555]">Email</p>
-            <p className="text-sm text-[#ddd] mt-0.5">{user.email}</p>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-[#111] border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-white/10"
+            />
+          </div>
+          <button
+            onClick={saveAccount}
+            disabled={acctLoading}
+            className="text-xs bg-[#3ecf8e] hover:bg-[#3ecf8e]/90 disabled:opacity-50 text-black font-semibold py-2 px-3 rounded-md"
+          >
+            {acctLoading ? "Salvando..." : "Salvar alterações"}
+          </button>
+        </div>
+      </div>
+
+      {/* Password change */}
+      <div className="bg-[#111] border border-white/5 rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Shield className="h-4 w-4 text-[#555]" />
+          <p className="text-xs font-medium text-[#555] uppercase tracking-wider">Senha</p>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs text-[#555]">Senha atual</p>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full bg-[#111] border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-white/10"
+            />
           </div>
           <div>
-            <p className="text-xs text-[#555]">Plano atual</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={`text-xs px-2 py-0.5 rounded font-mono font-bold ${
-                user.plan === "FREE"   ? "bg-[#333] text-[#888]" :
-                user.plan === "PRO"    ? "bg-[#3ecf8e]/20 text-[#3ecf8e]" :
-                "bg-purple-500/20 text-purple-400"
-              }`}>{user.plan}</span>
-              {user.plan === "FREE" && (
-                <button
-                  onClick={() => navigate("/upgrade")}
-                  className="text-xs text-[#3ecf8e] hover:underline"
-                >
-                  Fazer upgrade →
-                </button>
-              )}
-            </div>
+            <p className="text-xs text-[#555]">Nova senha</p>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full bg-[#111] border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-white/10"
+            />
           </div>
+          <button
+            onClick={changePwd}
+            disabled={pwdLoading}
+            className="text-xs bg-[#3ecf8e] hover:bg-[#3ecf8e]/90 disabled:opacity-50 text-black font-semibold py-2 px-3 rounded-md"
+          >
+            {pwdLoading ? "Alterando..." : "Mudar senha"}
+          </button>
         </div>
       </div>
 
